@@ -4,6 +4,8 @@ from django.utils.translation import ugettext_lazy as _
 from uuidfield import UUIDField
 from .fields import HexIntegerField
 
+from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
+
 
 # Compatibility with custom user models, while keeping backwards-compatibility with <1.5
 AUTH_USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
@@ -21,6 +23,8 @@ class Device(models.Model):
 
 	def __unicode__(self):
 		return self.name or str(self.device_id or "") or "%s for %s" % (self.__class__.__name__, self.user or "unknown user")
+
+BASE_DEVICE_MODEL = SETTINGS.get('BASE_DEVICE_MODEL', Device)
 
 
 class GCMDeviceManager(models.Manager):
@@ -41,7 +45,7 @@ class GCMDeviceQuerySet(models.query.QuerySet):
 				data=data)
 
 
-class GCMDevice(Device):
+class GCMDevice(BASE_DEVICE_MODEL):
 	# device_id cannot be a reliable primary key as fragmentation between different devices
 	# can make it turn out to be null and such:
 	# http://android-developers.blogspot.co.uk/2011/03/identifying-app-installations.html
@@ -75,7 +79,7 @@ class APNSDeviceQuerySet(models.query.QuerySet):
 			return apns_send_bulk_message(registration_ids=list(self.values_list("registration_id", flat=True)), alert=message, **kwargs)
 
 
-class APNSDevice(Device):
+class APNSDevice(BASE_DEVICE_MODEL):
 	device_id = UUIDField(verbose_name=_("Device ID"), blank=True, null=True,
 		help_text="UDID / UIDevice.identifierForVendor()")
 	registration_id = models.CharField(verbose_name=_("Registration ID"), max_length=64, unique=True)
